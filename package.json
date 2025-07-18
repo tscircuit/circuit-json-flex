@@ -7,6 +7,7 @@
     "build:site": "cosmos-export"
   },
   "devDependencies": {
+    "@react-hook/resize-observer": "^2.0.2",
     "@types/bun": "latest",
     "bun-match-svg": "^0.0.12",
     "graphics-debug": "^0.0.61",
