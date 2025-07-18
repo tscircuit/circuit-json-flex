@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test"
 import { RootCircuit } from "tscircuit"
 import { convertCircuitJsonToPcbSvg } from "circuit-to-svg"
+import { layoutCircuitJsonWithFlex } from "../../lib/layoutCircuitJsonWithFlex"
 
 test("example1", async () => {
   const circuit = new RootCircuit()
