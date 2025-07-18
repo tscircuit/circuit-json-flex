@@ -55,9 +55,29 @@ export function layoutCircuitJsonWithFlex(
   for (const comp of pcbComponents) {
     const l = layout[comp.pcb_component_id]
     if (!l) continue
-    comp.center = {
+    const oldCenter = { ...(comp.center as Point) }
+    const newCenter = {
       x: l.position.x + l.size.width / 2,
       y: l.position.y + l.size.height / 2,
+    }
+    const dx = newCenter.x - (oldCenter?.x ?? 0)
+    const dy = newCenter.y - (oldCenter?.y ?? 0)
+    comp.center = newCenter
+    // Shift any pcb_smtpad(s) that belong to this component
+    for (const element of circuitJsonCopy) {
+      if (
+        element.type === "pcb_smtpad" &&
+        element.pcb_component_id === comp.pcb_component_id
+      ) {
+        if ("x" in element && typeof element.x === "number") element.x += dx
+        if ("y" in element && typeof element.y === "number") element.y += dy
+        if ("center" in element && element.center) {
+          element.center = {
+            x: (element.center.x ?? 0) + dx,
+            y: (element.center.y ?? 0) + dy,
+          }
+        }
+      }
     }
   }
 
