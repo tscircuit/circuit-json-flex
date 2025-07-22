@@ -42,10 +42,13 @@ export function layoutCircuitJsonWithFlex(
   ) as PcbComponent[]
 
   for (const comp of pcbComponents) {
+    // flexGrow should be a unit-less weighting factor (commonly 1)
+    // while the explicit size of the item is provided via `height`.
     root.addChild({
       id: comp.pcb_component_id,
       flexBasis: toNumber(comp.width),
-      flexGrow: toNumber(comp.height),
+      flexGrow: 1,
+      height: toNumber(comp.height),
     })
   }
 
