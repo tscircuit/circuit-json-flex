@@ -1,6 +1,8 @@
 import { RootFlexBox, type FlexBoxOptions } from "@tscircuit/miniflex"
-import type { AnyCircuitElement, PcbComponent, Point } from "circuit-json"
+import type { AnyCircuitElement, PcbComponent } from "circuit-json"
 import Debug from "debug"
+import { transformPCBElements } from "@tscircuit/circuit-json-util"
+import { translate } from "transformation-matrix"
 /**
  * Lay out PCB components of a Circuit JSON using a flex-box algorithm.
  *
@@ -13,24 +15,25 @@ import Debug from "debug"
  */
 const debug = Debug("tscircuit:circuit-json-flex:layoutCircuitJsonWithFlex")
 
+const toNumber = (v: unknown): number =>
+  typeof v === "number" ? v : typeof v === "string" ? parseFloat(v) : 0
+
 export function layoutCircuitJsonWithFlex(
   circuitJson: AnyCircuitElement[],
   options: Partial<FlexBoxOptions> = {},
 ): AnyCircuitElement[] {
   const circuitJsonCopy = circuitJson.map((e) => ({ ...e }))
-  /** Helper: turn `"12mm"` → 12, 10 → 10 */
-  const toNumber = (v: unknown): number =>
-    typeof v === "number" ? v : typeof v === "string" ? parseFloat(v) : 0
 
   // Determine board size for the root flex-box
   const pcbBoard = circuitJsonCopy.find((e) => e.type === "pcb_board")
   if (!pcbBoard) return circuitJsonCopy
+
   const boardWidth = toNumber(pcbBoard.width)
   const boardHeight = toNumber(pcbBoard.height)
 
   const root = new RootFlexBox(boardWidth, boardHeight, {
-    direction: "row",
-    justifyContent: "space-between", // HARDCODED
+    id: pcbBoard.pcb_board_id,
+    justifyContent: options.justifyContent ?? "space-between",
   })
 
   // Add every pcb_component as an item
@@ -38,62 +41,36 @@ export function layoutCircuitJsonWithFlex(
     (e) => e.type === "pcb_component",
   ) as PcbComponent[]
 
-  debug("pcbComponents before layout", pcbComponents)
-
   for (const comp of pcbComponents) {
     root.addChild({
       id: comp.pcb_component_id,
-      flexGrow: 1,
-      flexBasis: 0,
+      flexBasis: toNumber(comp.width),
+      flexGrow: toNumber(comp.height),
     })
   }
 
   root.build()
   const layout = root.getLayout()
 
-  // Apply calculated centres back to the pcb_components
+  console.log(layout)
+
+  // Apply calculated centres back to all the child components of the pcb_component
   for (const comp of pcbComponents) {
     const l = layout[comp.pcb_component_id]
     if (!l) continue
-    const oldCenter = { ...(comp.center as Point) }
-    const newCenter = {
-      x: l.position.x + l.size.width / 2,
-      y: l.position.y + l.size.height / 2,
+    const center = {
+      x: l.position.x,
+      y: l.position.y,
     }
-    const dx = newCenter.x - (oldCenter?.x ?? 0)
-    const dy = newCenter.y - (oldCenter?.y ?? 0)
-    comp.center = newCenter
-    // Shift any pcb_smtpad(s) that belong to this component
-    for (const element of circuitJsonCopy) {
-      if (
-        element.type === "pcb_smtpad" &&
-        element.pcb_component_id === comp.pcb_component_id
-      ) {
-        if ("x" in element && typeof element.x === "number") element.x += dx
-        if ("y" in element && typeof element.y === "number") element.y += dy
-        if ("center" in element && element.center) {
-          element.center = {
-            x: (element.center.x ?? 0) + dx,
-            y: (element.center.y ?? 0) + dy,
-          }
-        }
-      }
-    }
+    transformPCBElements(
+      circuitJsonCopy.filter(
+        (e) =>
+          "pcb_component_id" in e &&
+          e.pcb_component_id === comp.pcb_component_id,
+      ),
+      translate(center.x, center.y),
+    )
   }
 
-  debug("pcbComponents after layout", pcbComponents)
-
-  const result = circuitJsonCopy.map((e) =>
-    e.type === "pcb_component"
-      ? {
-          ...e,
-          center: pcbComponents.find((c) => c.pcb_component_id === e.pcb_component_id)
-            ?.center as Point,
-        }
-      : e,
-  )
-
-  debug("result", result.filter((e) => e.type === "pcb_component"))
-
-  return result
+  return circuitJsonCopy
 }
