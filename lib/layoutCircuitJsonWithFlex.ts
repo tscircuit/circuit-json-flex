@@ -1,4 +1,5 @@
-import { RootFlexBox, type FlexBoxOptions } from "@tscircuit/miniflex"
+import { RootFlexBox } from "@tscircuit/miniflex"
+import type { FlexBoxOptions } from "@tscircuit/miniflex"
 import type { AnyCircuitElement, PcbBoard, PcbComponent, PcbGroup } from "circuit-json"
 import Debug from "debug"
 import { transformPCBElements } from "@tscircuit/circuit-json-util"
