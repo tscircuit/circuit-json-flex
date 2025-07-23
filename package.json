@@ -13,12 +13,11 @@
     "@types/bun": "latest",
     "@types/debug": "^4.1.12",
     "bun-match-svg": "^0.0.12",
-    "circuit-to-svg": "^0.0.170",
     "debug": "^4.4.1",
     "graphics-debug": "^0.0.61",
     "react-cosmos": "^7.0.0",
     "react-cosmos-plugin-vite": "^7.0.0",
-    "tscircuit": "^0.0.547",
+    "tscircuit": "^0.0.555",
     "vite": "^7.0.5"
   },
   "peerDependencies": {
