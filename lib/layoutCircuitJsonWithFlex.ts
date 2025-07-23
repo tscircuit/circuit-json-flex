@@ -33,7 +33,8 @@ export function layoutCircuitJsonWithFlex(
 
   const root = new RootFlexBox(boardWidth, boardHeight, {
     id: pcbBoard.pcb_board_id,
-    justifyContent: options.justifyContent ?? "space-between",
+    justifyContent: options.justifyContent ?? "center",
+    alignItems: options.alignItems ?? "center",
   })
 
   // Add every pcb_component as an item
@@ -42,12 +43,9 @@ export function layoutCircuitJsonWithFlex(
   ) as PcbComponent[]
 
   for (const comp of pcbComponents) {
-    // flexGrow should be a unit-less weighting factor (commonly 1)
-    // while the explicit size of the item is provided via `height`.
     root.addChild({
       id: comp.pcb_component_id,
       flexBasis: toNumber(comp.width),
-      flexGrow: 1,
       height: toNumber(comp.height),
     })
   }
@@ -55,16 +53,18 @@ export function layoutCircuitJsonWithFlex(
   root.build()
   const layout = root.getLayout()
 
-  console.log(layout)
-
   // Apply calculated centres back to all the child components of the pcb_component
   for (const comp of pcbComponents) {
     const l = layout[comp.pcb_component_id]
     if (!l) continue
+
+    // Convert from miniflex screen coordinates to cartesian coordinates
+    // and miniflex coordinates origin is top-left to center of the board
     const center = {
-      x: l.position.x,
-      y: l.position.y,
+      x: l.position.x + comp.width / 2 - boardWidth / 2,
+      y: -(l.position.y + comp.height / 2) + boardHeight / 2,
     }
+
     transformPCBElements(
       circuitJsonCopy.filter(
         (e) =>
