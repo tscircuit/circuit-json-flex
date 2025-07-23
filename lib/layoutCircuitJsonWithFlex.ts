@@ -1,5 +1,5 @@
 import { RootFlexBox, type FlexBoxOptions } from "@tscircuit/miniflex"
-import type { AnyCircuitElement, PcbComponent } from "circuit-json"
+import type { AnyCircuitElement, PcbBoard, PcbComponent, PcbGroup } from "circuit-json"
 import Debug from "debug"
 import { transformPCBElements } from "@tscircuit/circuit-json-util"
 import { translate } from "transformation-matrix"
@@ -25,14 +25,18 @@ export function layoutCircuitJsonWithFlex(
   const circuitJsonCopy = circuitJson.map((e) => ({ ...e }))
 
   // Determine board size for the root flex-box
-  const pcbBoard = circuitJsonCopy.find((e) => e.type === "pcb_board")
-  if (!pcbBoard) return circuitJsonCopy
+  const subcircuit = circuitJsonCopy.find(
+    (e) =>
+      e.type === "pcb_board" ||
+      (e.type === "pcb_group" && e.is_subcircuit),
+  ) as PcbBoard | PcbGroup
+  if (!subcircuit) return circuitJsonCopy
 
-  const boardWidth = toNumber(pcbBoard.width)
-  const boardHeight = toNumber(pcbBoard.height)
+  const subcircuitWidth = toNumber(subcircuit.width)
+  const subcircuitHeight = toNumber(subcircuit.height)
 
-  const root = new RootFlexBox(boardWidth, boardHeight, {
-    id: pcbBoard.pcb_board_id,
+  const root = new RootFlexBox(subcircuitWidth, subcircuitHeight, {
+    id: subcircuit.subcircuit_id,
     justifyContent: options.justifyContent ?? "center",
     alignItems: options.alignItems ?? "center",
   })
@@ -61,8 +65,8 @@ export function layoutCircuitJsonWithFlex(
     // Convert from miniflex screen coordinates to cartesian coordinates
     // and miniflex coordinates origin is top-left to center of the board
     const center = {
-      x: l.position.x + comp.width / 2 - boardWidth / 2,
-      y: -(l.position.y + comp.height / 2) + boardHeight / 2,
+      x: l.position.x + toNumber(comp.width) / 2 - subcircuitWidth / 2,
+      y: -(l.position.y + toNumber(comp.height) / 2) + subcircuitHeight / 2,
     }
 
     transformPCBElements(
