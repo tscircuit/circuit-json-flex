@@ -9,6 +9,7 @@ import type {
 import Debug from "debug"
 import { transformPCBElements } from "@tscircuit/circuit-json-util"
 import { translate } from "transformation-matrix"
+import { findParentSourceGroup } from "./utils/findParentSourceGroup"
 
 const debug = Debug("tscircuit:circuit-json-flex:layoutCircuitJsonWithFlex")
 
@@ -21,21 +22,28 @@ export function layoutCircuitJsonWithFlex(
 ): AnyCircuitElement[] {
   const circuitJsonCopy = circuitJson.map((e) => ({ ...e }))
 
-  // ────────────────────────────────────────────────────────────────
-  // 1.  Pick a container that defines the flex-box size
-  //     – board  → pcb_board
-  //     – group  → root pcb_group (is_subcircuit)
-  // ────────────────────────────────────────────────────────────────
-  const subcircuit = circuitJsonCopy.find(
-    (e) =>
-      e.type === "pcb_board" || (e.type === "pcb_group" && e.is_subcircuit),
-  ) as PcbBoard | PcbGroup
+  // Determine the container that defines the root flex area
+  let subcircuit: PcbBoard | PcbGroup | undefined
+
+  // Prefer a pcb_board when present – flex layout will treat the board as the container
+  const board = circuitJsonCopy.find((e): e is PcbBoard => e.type === "pcb_board")
+  if (board) {
+    subcircuit = board
+  } else {
+    // Otherwise fall back to the root pcb_group that corresponds to the root source_group
+    const rootSrc = findParentSourceGroup(circuitJsonCopy)
+    if (rootSrc) {
+      subcircuit = circuitJsonCopy.find(
+        (e): e is PcbGroup =>
+          e.type === "pcb_group" && e.source_group_id === rootSrc.source_group_id,
+      )
+    }
+  }
 
   if (!subcircuit) {
     debug("No board / sub-circuit found – nothing to lay out")
     return circuitJsonCopy
   }
-
   const isContainerGroup = subcircuit.type === "pcb_group"
   const subcircuitWidth = toNumber(subcircuit.width)
   const subcircuitHeight = toNumber(subcircuit.height)
@@ -61,7 +69,7 @@ export function layoutCircuitJsonWithFlex(
 
   if (isContainerGroup) {
     // Root group case (no board)
-    const rootGroupId = subcircuit.pcb_group_id
+    const rootGroupId = (subcircuit as PcbGroup).pcb_group_id
     childGroups.push(...pcbGroups.filter((g) => g.pcb_group_id !== rootGroupId))
     childComponents.push(
       ...circuitJsonCopy.filter(
@@ -106,7 +114,7 @@ export function layoutCircuitJsonWithFlex(
   for (const g of childGroups) {
     const l = layout[g.pcb_group_id]
     if (!l) continue
-    const centre = {
+    const center = {
       x: l.position.x + toNumber(g.width) / 2 - subcircuitWidth / 2,
       y: -(l.position.y + toNumber(g.height) / 2) + subcircuitHeight / 2,
     }
@@ -117,7 +125,7 @@ export function layoutCircuitJsonWithFlex(
           (e.type === "pcb_group" && e.pcb_group_id === g.pcb_group_id) ||
           ("pcb_group_id" in e && e.pcb_group_id === g.pcb_group_id),
       ),
-      translate(centre.x, centre.y),
+      translate(center.x, center.y),
     )
   }
 
