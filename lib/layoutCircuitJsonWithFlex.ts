@@ -114,9 +114,8 @@ export function layoutCircuitJsonWithFlex(
     transformPCBElements(
       circuitJsonCopy.filter(
         (e) =>
-          (e.type === "pcb_group" &&
-            (e as PcbGroup).pcb_group_id === g.pcb_group_id) ||
-          ("pcb_group_id" in e && (e as any).pcb_group_id === g.pcb_group_id),
+          (e.type === "pcb_group" && e.pcb_group_id === g.pcb_group_id) ||
+          ("pcb_group_id" in e && e.pcb_group_id === g.pcb_group_id),
       ),
       translate(centre.x, centre.y),
     )
