@@ -32,4 +32,4 @@ test("example2 three components inside a board", async () => {
     import.meta.path,
     "pcb-to-miniflex02-after",
   )
-}) 
+})

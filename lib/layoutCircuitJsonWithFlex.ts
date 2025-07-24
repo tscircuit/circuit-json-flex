@@ -28,8 +28,7 @@ export function layoutCircuitJsonWithFlex(
   // ────────────────────────────────────────────────────────────────
   const subcircuit = circuitJsonCopy.find(
     (e) =>
-      e.type === "pcb_board" ||
-      (e.type === "pcb_group" && e.is_subcircuit),
+      e.type === "pcb_board" || (e.type === "pcb_group" && e.is_subcircuit),
   ) as PcbBoard | PcbGroup
 
   if (!subcircuit) {
@@ -63,9 +62,7 @@ export function layoutCircuitJsonWithFlex(
   if (isContainerGroup) {
     // Root group case (no board)
     const rootGroupId = subcircuit.pcb_group_id
-    childGroups.push(
-      ...pcbGroups.filter((g) => g.pcb_group_id !== rootGroupId),
-    )
+    childGroups.push(...pcbGroups.filter((g) => g.pcb_group_id !== rootGroupId))
     childComponents.push(
       ...circuitJsonCopy.filter(
         (e): e is PcbComponent =>
@@ -77,8 +74,7 @@ export function layoutCircuitJsonWithFlex(
     childGroups.push(...pcbGroups)
     childComponents.push(
       ...circuitJsonCopy.filter(
-        (e): e is PcbComponent =>
-          e.type === "pcb_component" && !e.pcb_group_id,
+        (e): e is PcbComponent => e.type === "pcb_component" && !e.pcb_group_id,
       ),
     )
   }
@@ -138,8 +134,7 @@ export function layoutCircuitJsonWithFlex(
     transformPCBElements(
       circuitJsonCopy.filter(
         (e) =>
-          "pcb_component_id" in e &&
-          e.pcb_component_id === c.pcb_component_id,
+          "pcb_component_id" in e && e.pcb_component_id === c.pcb_component_id,
       ),
       translate(centre.x, centre.y),
     )
