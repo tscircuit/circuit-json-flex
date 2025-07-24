@@ -11,7 +11,7 @@ import type { AnyCircuitElement, SourceGroup, PcbBoard } from "circuit-json"
  * If `childSubcircuitId` is provided, the search starts from that sub-circuit
  * and ascends through `parent_subcircuit_id` until the root is reached.
  */
-export function findParentSourceGroup(
+export function findRootSourceGroup(
   circuitJson: AnyCircuitElement[],
   childSubcircuitId?: string,
 ): SourceGroup | undefined {

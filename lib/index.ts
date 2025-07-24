@@ -1,2 +1,2 @@
 export * from "./layoutCircuitJsonWithFlex"
-export * from "./utils/findParentSourceGroup"
+export * from "./utils/findRootSourceGroup"

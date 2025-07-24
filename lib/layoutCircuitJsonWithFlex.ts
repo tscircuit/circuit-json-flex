@@ -9,7 +9,7 @@ import type {
 import Debug from "debug"
 import { transformPCBElements } from "@tscircuit/circuit-json-util"
 import { translate } from "transformation-matrix"
-import { findParentSourceGroup } from "./utils/findParentSourceGroup"
+import { findRootSourceGroup } from "./utils/findRootSourceGroup"
 
 const debug = Debug("tscircuit:circuit-json-flex:layoutCircuitJsonWithFlex")
 
@@ -31,7 +31,7 @@ export function layoutCircuitJsonWithFlex(
     subcircuit = board
   } else {
     // Otherwise fall back to the root pcb_group that corresponds to the root source_group
-    const rootSrc = findParentSourceGroup(circuitJsonCopy)
+    const rootSrc = findRootSourceGroup(circuitJsonCopy)
     if (rootSrc) {
       subcircuit = circuitJsonCopy.find(
         (e): e is PcbGroup =>
