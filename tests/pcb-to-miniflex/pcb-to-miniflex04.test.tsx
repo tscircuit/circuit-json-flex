@@ -2,14 +2,17 @@ import { expect, test } from "bun:test"
 import { RootCircuit } from "tscircuit"
 import { convertCircuitJsonToPcbSvg } from "circuit-to-svg"
 import { layoutCircuitJsonWithFlex } from "../../lib/layoutCircuitJsonWithFlex"
+import { applyFlexLikeCore } from "../utils/flexCoreLayout"
 
-test("example2 three components inside a board", async () => {
+test("example4 group inside a board", async () => {
   const circuit = new RootCircuit()
   circuit.add(
-    <board width="10mm" height="10mm">
+    <board name="board1" width="100mm" height="100mm">
       <resistor name="R1" footprint="0402" resistance="10k" />
-      <capacitor name="C1" capacitance="10uF" footprint="0603" />
-      <resistor name="R2" footprint="0402" resistance="10k" />
+      <group name="group1" subcircuit width="10mm" height="10mm">
+        <resistor name="R2" footprint="0402" resistance="10k" />
+        <capacitor name="C1" capacitance="10uF" footprint="0603" />
+      </group>
     </board>,
   )
 
@@ -20,16 +23,16 @@ test("example2 three components inside a board", async () => {
   const pcbSvg1 = convertCircuitJsonToPcbSvg(circuitJson)
   expect(pcbSvg1).toMatchSvgSnapshot(
     import.meta.path,
-    "pcb-to-miniflex02-before",
+    "pcb-to-miniflex04-before",
   )
 
-  const circuitJsonWithFlex = layoutCircuitJsonWithFlex(circuitJson, {
+  const circuitJsonWithFlex = applyFlexLikeCore(circuitJson, {
     justifyContent: "space-between",
   })
 
   const pcbSvg2 = convertCircuitJsonToPcbSvg(circuitJsonWithFlex)
   expect(pcbSvg2).toMatchSvgSnapshot(
     import.meta.path,
-    "pcb-to-miniflex02-after",
+    "pcb-to-miniflex04-after",
   )
 })
