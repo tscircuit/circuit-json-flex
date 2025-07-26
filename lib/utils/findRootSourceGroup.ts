@@ -37,7 +37,7 @@ export function findRootSourceGroup(
     }
   }
 
-  // Fallback: pick any source_group that is_subcircuit && no parent
+  // Fallback A: pick any source_group that is_subcircuit && no parent
   if (!current) {
     current = circuitJson.find(
       (e): e is SourceGroup =>
@@ -45,6 +45,17 @@ export function findRootSourceGroup(
         !!e.is_subcircuit &&
         (e.parent_subcircuit_id === undefined || e.parent_subcircuit_id === null),
     )
+  }
+
+  // Fallback B: if there is *exactly one* source_group in the document,
+  // treat it as the root (useful for sub-set layouts with no board context).
+  if (!current) {
+    const allSrc = circuitJson.filter(
+      (e): e is SourceGroup => e.type === "source_group" && !!e.is_subcircuit,
+    )
+    if (allSrc.length === 1) {
+      current = allSrc[0]
+    }
   }
 
   // 2. Ascend until no parent_subcircuit_id

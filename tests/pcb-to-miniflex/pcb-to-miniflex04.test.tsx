@@ -2,13 +2,14 @@ import { expect, test } from "bun:test"
 import { RootCircuit } from "tscircuit"
 import { convertCircuitJsonToPcbSvg } from "circuit-to-svg"
 import { layoutCircuitJsonWithFlex } from "../../lib/layoutCircuitJsonWithFlex"
+import { applyFlexLikeCore } from "../utils/flexCoreLayout"
 
 test("example4 group inside a board", async () => {
   const circuit = new RootCircuit()
   circuit.add(
-    <board width="100mm" height="100mm">
+    <board name="board1" width="100mm" height="100mm">
       <resistor name="R1" footprint="0402" resistance="10k" />
-      <group subcircuit width="10mm" height="10mm">
+      <group name="group1" subcircuit width="10mm" height="10mm">
         <resistor name="R2" footprint="0402" resistance="10k" />
         <capacitor name="C1" capacitance="10uF" footprint="0603" />
       </group>
@@ -25,7 +26,7 @@ test("example4 group inside a board", async () => {
     "pcb-to-miniflex04-before",
   )
 
-  const circuitJsonWithFlex = layoutCircuitJsonWithFlex(circuitJson, {
+  const circuitJsonWithFlex = applyFlexLikeCore(circuitJson, {
     justifyContent: "space-between",
   })
 

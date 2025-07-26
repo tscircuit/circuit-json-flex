@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test"
 import { RootCircuit } from "tscircuit"
 import { findRootSourceGroup } from "../../lib/utils/findRootSourceGroup"
+import { getCircuitJsonTree } from "@tscircuit/circuit-json-util"
 
 // Utility to get all source_group IDs for sanity
 const sourceGroupIds = (json: any[]) =>
