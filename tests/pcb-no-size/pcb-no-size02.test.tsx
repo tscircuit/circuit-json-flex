@@ -29,6 +29,7 @@ test("board & group without size – nested components", async () => {
 
   const circuitJsonWithFlex = layoutCircuitJsonWithFlex(circuitJson, {
     justifyContent: "space-between",
+    columnGap: 2,
     inferContainerSize: true,
   })
 

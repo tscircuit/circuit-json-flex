@@ -27,6 +27,7 @@ test("board without size – two components", async () => {
 
   const circuitJsonWithFlex = layoutCircuitJsonWithFlex(circuitJson, {
     justifyContent: "space-between",
+    columnGap: 2,
     inferContainerSize: true,
   })
 
