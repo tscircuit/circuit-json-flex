@@ -31,7 +31,7 @@ export function layoutCircuitJsonWithFlex(
 ): AnyCircuitElement[] {
   const circuitJsonCopy = circuitJson.map((e) => ({ ...e }))
 
-  // 1. Build a tree of the circuit – this already groups components for us
+  // 1. Build a tree of the circuit
   const tree = getCircuitJsonTree(circuitJsonCopy)
 
   let rootContainer: PcbBoard | PcbGroup | undefined
