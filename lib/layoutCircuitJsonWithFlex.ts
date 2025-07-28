@@ -19,7 +19,7 @@ const toNumber = (v: unknown): number =>
 
 type NodeInfo = {
   id: string
-  componentIds: string[]
+  pcbComponentIds: string[]
   refCenter: { x: number; y: number }
   width: number
   height: number
@@ -57,12 +57,58 @@ export function layoutCircuitJsonWithFlex(
 
   if (!rootContainer) return circuitJsonCopy
 
-  const rootSubcircuitWidth = toNumber(rootContainer.width)
-  const rootSubcircuitHeight = toNumber(rootContainer.height)
+  // -----------------------------------------------------------------------
+  // Collapse a degenerate hierarchy layer: If the current root has exactly
+  // one child and that child is itself a *subcircuit* group with explicit
+  // dimensions, then we treat that child as the new root container. This
+  // allows the layout to operate on the meaningful contents rather than an
+  // unnecessary wrapper (common when a board contains a single sub-circuit
+  // group).
+  // -----------------------------------------------------------------------
+  let effectiveTree = tree
+  let effectiveRootContainer: PcbBoard | PcbGroup = rootContainer
+
+  while (
+    effectiveTree.childNodes.length === 1 &&
+    ((): boolean => {
+      const firstChild = effectiveTree.childNodes[0]
+      return (
+        firstChild !== undefined &&
+        firstChild.nodeType === "group" &&
+        Boolean(firstChild.sourceGroup?.subcircuit_id)
+      )
+    })()
+  ) {
+    const firstChild = effectiveTree.childNodes[0]!
+    const childSubId = firstChild.sourceGroup!.subcircuit_id!
+
+    const childPcbGroup = circuitJsonCopy.find(
+      (e) =>
+        e.type === "pcb_group" &&
+        (e as PcbGroup).is_subcircuit === true &&
+        e.subcircuit_id === childSubId,
+    ) as PcbGroup | undefined
+
+    // Stop if we can't find a matching pcb_group or it lacks size info
+    if (
+      !childPcbGroup ||
+      childPcbGroup.width == null ||
+      childPcbGroup.height == null
+    ) {
+      break
+    }
+
+    // Drill down one level
+    effectiveTree = firstChild
+    effectiveRootContainer = childPcbGroup
+  }
+
+  const rootSubcircuitWidth = toNumber(effectiveRootContainer.width)
+  const rootSubcircuitHeight = toNumber(effectiveRootContainer.height)
 
   // 2. Prepare the flex root for the selected container
   const rootFlex = new RootFlexBox(rootSubcircuitWidth, rootSubcircuitHeight, {
-    id: rootContainer.subcircuit_id,
+    id: effectiveRootContainer.subcircuit_id,
     justifyContent: options.justifyContent ?? "center",
     alignItems: options.alignItems ?? "center",
   })
@@ -71,13 +117,13 @@ export function layoutCircuitJsonWithFlex(
   //    child may be either a component itself or a (nested) group.
   const nodeInfos: NodeInfo[] = []
 
-  tree.childNodes.forEach((child, idx) => {
+  for (const child of effectiveTree.childNodes) {
     let refCenter: { x: number; y: number }
     let width: number
     let height: number
 
     let childFlexItemId: string
-    let componentIds: string[]
+    let pcbComponentIds: string[]
 
     if (child.nodeType === "component") {
       const comp = circuitJsonCopy.find(
@@ -85,14 +131,16 @@ export function layoutCircuitJsonWithFlex(
           e.type === "pcb_component" &&
           e.source_component_id === child.sourceComponent!.source_component_id,
       ) as PcbComponent | undefined
-      if (!comp) return
+      if (!comp) {
+        continue
+      }
 
       width = toNumber(comp.width)
       height = toNumber(comp.height)
       refCenter = comp.center
 
       childFlexItemId = comp.pcb_component_id
-      componentIds = [comp.pcb_component_id]
+      pcbComponentIds = [comp.pcb_component_id]
     } else {
       // GROUP: try to locate its pcb_group for dimensions
       const scId = child.sourceGroup?.subcircuit_id
@@ -104,7 +152,9 @@ export function layoutCircuitJsonWithFlex(
           e.subcircuit_id === scId,
       ) as PcbGroup | undefined
 
-      if (!pcbGroup) return
+      if (!pcbGroup) {
+        continue
+      }
 
       width = toNumber(pcbGroup.width)
       height = toNumber(pcbGroup.height)
@@ -112,7 +162,7 @@ export function layoutCircuitJsonWithFlex(
 
       childFlexItemId = pcbGroup.subcircuit_id!
       // collect all pcb_components that belong to this group
-      componentIds = circuitJsonCopy
+      pcbComponentIds = circuitJsonCopy
         .filter(
           (e): e is PcbComponent =>
             e.type === "pcb_component" &&
@@ -131,12 +181,12 @@ export function layoutCircuitJsonWithFlex(
     })
     nodeInfos.push({
       id: childFlexItemId,
-      componentIds,
+      pcbComponentIds,
       refCenter,
       width,
       height,
     })
-  })
+  }
 
   // 4. Compute layout & apply translations ----------------------------------
   rootFlex.build()
@@ -157,15 +207,15 @@ export function layoutCircuitJsonWithFlex(
     const dx = newCenter.x - originalCenter.x
     const dy = newCenter.y - originalCenter.y
 
-    for (const compId of info.componentIds) {
-      const comp = circuitJsonCopy.find(
-        (e) => e.type === "pcb_component" && e.pcb_component_id === compId,
+    for (const pcbComponentId of info.pcbComponentIds) {
+      const pcbComponent = circuitJsonCopy.find(
+        (e) =>
+          e.type === "pcb_component" && e.pcb_component_id === pcbComponentId,
       ) as PcbComponent
 
-      const current = comp.center
-      repositionPcbComponentTo(circuitJsonCopy, compId, {
-        x: current.x + dx,
-        y: current.y + dy,
+      repositionPcbComponentTo(circuitJsonCopy, pcbComponentId, {
+        x: pcbComponent.center.x + dx,
+        y: pcbComponent.center.y + dy,
       })
     }
   }
