@@ -28,7 +28,7 @@ type NodeInfo = {
 
 export function layoutCircuitJsonWithFlex(
   circuitJson: AnyCircuitElement[],
-  options: Partial<FlexBoxOptions> = {},
+  options: Partial<FlexBoxOptions & { inferContainerSize?: boolean }> = {},
 ): AnyCircuitElement[] {
   const circuitJsonCopy = circuitJson.map((e) => ({ ...e }))
 
@@ -181,13 +181,22 @@ export function layoutCircuitJsonWithFlex(
   let containerWidth = rootSubcircuitWidth
   let containerHeight = rootSubcircuitHeight
 
-  if (!(containerWidth > 0) || !(containerHeight > 0)) {
+  if (options.inferContainerSize === true || !(containerWidth > 0) || !(containerHeight > 0)) {
     const { width: minW, height: minH } = getMinimumFlexContainer(
       nodeInfos.map((n) => ({ width: n.width, height: n.height })),
       options,
     )
-    if (!(containerWidth > 0)) containerWidth = minW
-    if (!(containerHeight > 0)) containerHeight = minH
+    if (options.inferContainerSize === true || !(containerWidth > 0)) {
+      containerWidth = minW
+    }
+    if (options.inferContainerSize === true || !(containerHeight > 0)) {
+      containerHeight = minH
+    }
+
+    // Persist inferred size back into the container element so that downstream
+    // tooling (e.g. SVG export) can rely on meaningful dimensions.
+    ;(effectiveRootContainer as any).width = containerWidth
+    ;(effectiveRootContainer as any).height = containerHeight
   }
 
   // 4. Build the flex layout ----------------------------------------------
