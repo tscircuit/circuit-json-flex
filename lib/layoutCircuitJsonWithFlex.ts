@@ -42,7 +42,7 @@ export function layoutCircuitJsonWithFlex(
   if (subcircuitId) {
     // Prefer a pcb_board
     rootContainer = circuitJsonCopy.find(
-      (e) => e.type === "pcb_board" && e.subcircuit_id === subcircuitId,
+      (e) => e.type === "pcb_board",
     ) as PcbBoard | undefined
 
     // Fallback to pcb_group (is_subcircuit)
@@ -78,7 +78,6 @@ export function layoutCircuitJsonWithFlex(
     // ---------------------------------------------------------------------
     // Build the flex-item definition
     // ---------------------------------------------------------------------
-
     let refCenter: { x: number; y: number }
     let width = 1
     let height = 1
@@ -120,31 +119,9 @@ export function layoutCircuitJsonWithFlex(
     nodeInfos.push({ id, componentIds: [id], refCenter, width, height })
   })
 
-  // if (nodeInfos.length === 0) {
-  //   const pcbComps = circuitJsonCopy.filter(
-  //     (e) => e.type === "pcb_component",
-  //   ) as PcbComponent[]
-  //   for (const comp of pcbComps) {
-  //     rootFlex.addChild({
-  //       id: comp.pcb_component_id,
-  //       flexBasis: toNumber(comp.width),
-  //       height: toNumber(comp.height),
-  //     })
-  //     nodeInfos.push({
-  //       id: comp.pcb_component_id,
-  //       componentIds: [comp.pcb_component_id],
-  //       refCenter:
-  //         "center" in comp
-  //           ? (comp as any).center
-  //           : { x: (comp as any).x, y: (comp as any).y },
-  //       width: toNumber(comp.width),
-  //       height: toNumber(comp.height),
-  //     })
-  //   }
-  // }
-
   // 4. Compute layout & apply translations ----------------------------------
   rootFlex.build()
+  // Bun.write("rootFlex.json", JSON.stringify(rootFlex, null, 2))
   const layout = rootFlex.getLayout()
 
   for (const info of nodeInfos) {
