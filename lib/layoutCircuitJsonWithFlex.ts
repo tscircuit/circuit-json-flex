@@ -11,6 +11,7 @@ import {
   getCircuitJsonTree,
   repositionPcbComponentTo,
 } from "@tscircuit/circuit-json-util"
+import { getMinimumFlexContainer } from "./getMinimumFlexContainer"
 
 const debug = Debug("tscircuit:circuit-json-flex:layoutCircuitJsonWithFlex")
 
@@ -55,7 +56,9 @@ export function layoutCircuitJsonWithFlex(
     }
   }
 
-  if (!rootContainer) return circuitJsonCopy
+  if (!rootContainer) {
+    debug("no root container found; using implicit container")
+  }
 
   // -----------------------------------------------------------------------
   // Collapse a degenerate hierarchy layer: If the current root has exactly
@@ -66,9 +69,10 @@ export function layoutCircuitJsonWithFlex(
   // group).
   // -----------------------------------------------------------------------
   let effectiveTree = tree
-  let effectiveRootContainer: PcbBoard | PcbGroup = rootContainer
+  let effectiveRootContainer: PcbBoard | PcbGroup | undefined = rootContainer
 
   while (
+    effectiveRootContainer &&
     effectiveTree.childNodes.length === 1 &&
     ((): boolean => {
       const firstChild = effectiveTree.childNodes[0]
@@ -103,17 +107,7 @@ export function layoutCircuitJsonWithFlex(
     effectiveRootContainer = childPcbGroup
   }
 
-  const rootSubcircuitWidth = toNumber(effectiveRootContainer.width)
-  const rootSubcircuitHeight = toNumber(effectiveRootContainer.height)
-
-  // 2. Prepare the flex root for the selected container
-  const rootFlex = new RootFlexBox(rootSubcircuitWidth, rootSubcircuitHeight, {
-    id: effectiveRootContainer.subcircuit_id,
-    justifyContent: options.justifyContent ?? "center",
-    alignItems: options.alignItems ?? "center",
-  })
-
-  // 3. Build flex items – one per *immediate* child of the tree root. Each
+  // 2. Build flex items – one per *immediate* child of the tree root. Each
   //    child may be either a component itself or a (nested) group.
   const nodeInfos: NodeInfo[] = []
 
@@ -174,17 +168,52 @@ export function layoutCircuitJsonWithFlex(
     const itemWidth = width
     const itemHeight = height
 
-    rootFlex.addChild({
-      id: childFlexItemId,
-      flexBasis: itemWidth,
-      height: itemHeight,
-    })
     nodeInfos.push({
       id: childFlexItemId,
       pcbComponentIds,
       refCenter,
       width,
       height,
+    })
+  }
+  let rootSubcircuitWidth = effectiveRootContainer
+    ? toNumber(effectiveRootContainer.width)
+    : 0
+  let rootSubcircuitHeight = effectiveRootContainer
+    ? toNumber(effectiveRootContainer.height)
+    : 0
+
+  if (rootSubcircuitWidth === 0 || rootSubcircuitHeight === 0) {
+    const { width: minW, height: minH } = getMinimumFlexContainer(
+      nodeInfos.map((i) => ({ width: i.width, height: i.height })),
+      options,
+    )
+    if (rootSubcircuitWidth === 0) rootSubcircuitWidth = minW
+    if (rootSubcircuitHeight === 0) rootSubcircuitHeight = minH
+    if (effectiveRootContainer) {
+      if (effectiveRootContainer.width == null) {
+        effectiveRootContainer.width = rootSubcircuitWidth
+      }
+      if (effectiveRootContainer.height == null) {
+        effectiveRootContainer.height = rootSubcircuitHeight
+      }
+    }
+  }
+
+  const rootFlex = new RootFlexBox(rootSubcircuitWidth, rootSubcircuitHeight, {
+    id: effectiveRootContainer?.subcircuit_id,
+    justifyContent: options.justifyContent ?? "center",
+    alignItems: options.alignItems ?? "center",
+    ...(options.direction != null ? { direction: options.direction } : {}),
+    ...(options.columnGap != null ? { columnGap: options.columnGap } : {}),
+    ...(options.rowGap != null ? { rowGap: options.rowGap } : {}),
+  })
+
+  for (const info of nodeInfos) {
+    rootFlex.addChild({
+      id: info.id,
+      flexBasis: info.width,
+      height: info.height,
     })
   }
 
