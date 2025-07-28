@@ -11,6 +11,7 @@ import {
   getCircuitJsonTree,
   repositionPcbComponentTo,
 } from "@tscircuit/circuit-json-util"
+import { getMinimumFlexContainer } from "./getMinimumFlexContainer"
 
 const debug = Debug("tscircuit:circuit-json-flex:layoutCircuitJsonWithFlex")
 
@@ -27,7 +28,7 @@ type NodeInfo = {
 
 export function layoutCircuitJsonWithFlex(
   circuitJson: AnyCircuitElement[],
-  options: Partial<FlexBoxOptions> = {},
+  options: Partial<FlexBoxOptions & { inferContainerSize?: boolean }> = {},
 ): AnyCircuitElement[] {
   const circuitJsonCopy = circuitJson.map((e) => ({ ...e }))
 
@@ -106,15 +107,10 @@ export function layoutCircuitJsonWithFlex(
   const rootSubcircuitWidth = toNumber(effectiveRootContainer.width)
   const rootSubcircuitHeight = toNumber(effectiveRootContainer.height)
 
-  // 2. Prepare the flex root for the selected container
-  const rootFlex = new RootFlexBox(rootSubcircuitWidth, rootSubcircuitHeight, {
-    id: effectiveRootContainer.subcircuit_id,
-    justifyContent: options.justifyContent ?? "center",
-    alignItems: options.alignItems ?? "center",
-  })
-
-  // 3. Build flex items – one per *immediate* child of the tree root. Each
-  //    child may be either a component itself or a (nested) group.
+  // 2. Gather information about each immediate child of the selected
+  //    container. We'll create the flexbox only *after* we've computed a
+  //    suitable container size (which might be missing on the PCB board /
+  //    group when it's not a sub-circuit).
   const nodeInfos: NodeInfo[] = []
 
   for (const child of effectiveTree.childNodes) {
@@ -171,14 +167,6 @@ export function layoutCircuitJsonWithFlex(
         .map((c) => c.pcb_component_id)
     }
 
-    const itemWidth = width
-    const itemHeight = height
-
-    rootFlex.addChild({
-      id: childFlexItemId,
-      flexBasis: itemWidth,
-      height: itemHeight,
-    })
     nodeInfos.push({
       id: childFlexItemId,
       pcbComponentIds,
@@ -188,10 +176,51 @@ export function layoutCircuitJsonWithFlex(
     })
   }
 
-  // 4. Compute layout & apply translations ----------------------------------
+  // --------------------------------------------------------------
+  // 3. Derive container dimensions if they were not explicitly provided ----
+  let containerWidth = rootSubcircuitWidth
+  let containerHeight = rootSubcircuitHeight
+
+  if (options.inferContainerSize === true || !(containerWidth > 0) || !(containerHeight > 0)) {
+    const { width: minW, height: minH } = getMinimumFlexContainer(
+      nodeInfos.map((n) => ({ width: n.width, height: n.height })),
+      options,
+    )
+    if (options.inferContainerSize === true || !(containerWidth > 0)) {
+      containerWidth = minW
+    }
+    if (options.inferContainerSize === true || !(containerHeight > 0)) {
+      containerHeight = minH
+    }
+
+    // Persist inferred size back into the container element so that downstream
+    // tooling (e.g. SVG export) can rely on meaningful dimensions.
+    ;(effectiveRootContainer as any).width = containerWidth
+    ;(effectiveRootContainer as any).height = containerHeight
+  }
+
+  // 4. Build the flex layout ----------------------------------------------
+  const rootFlex = new RootFlexBox(containerWidth, containerHeight, {
+    id: effectiveRootContainer.subcircuit_id,
+    justifyContent: options.justifyContent ?? "center",
+    alignItems: options.alignItems ?? "center",
+    direction: options.direction ?? "row",
+    columnGap: options.columnGap ?? 0,
+    rowGap: options.rowGap ?? 0,
+  })
+
+  for (const info of nodeInfos) {
+    rootFlex.addChild({
+      id: info.id,
+      flexBasis: info.width,
+      height: info.height,
+    })
+  }
+
   rootFlex.build()
   const layout = rootFlex.getLayout()
 
+  // 5. Apply translations ---------------------------------------------------
   for (const info of nodeInfos) {
     const l = layout[info.id]
     if (!l) continue
@@ -200,8 +229,8 @@ export function layoutCircuitJsonWithFlex(
 
     // Convert from screen-space (top-left origin) to Cartesian centre
     const newCenter = {
-      x: l.position.x + width / 2 - rootSubcircuitWidth / 2,
-      y: -(l.position.y + height / 2) + rootSubcircuitHeight / 2,
+      x: l.position.x + width / 2 - containerWidth / 2,
+      y: -(l.position.y + height / 2) + containerHeight / 2,
     }
 
     const dx = newCenter.x - originalCenter.x
