@@ -23,11 +23,11 @@
     "react-cosmos": "^7.0.0",
     "react-cosmos-plugin-vite": "^7.0.0",
     "tsup-node": "^0.1.0",
-    "vite": "^7.0.5"
+    "vite": "^7.0.5",
+    "tscircuit": "^0.0.584"
   },
   "peerDependencies": {
-    "typescript": "^5",
-    "tscircuit": "*"
+    "typescript": "^5"
   },
   "dependencies": {
     "@tscircuit/miniflex": "^0.0.3"
