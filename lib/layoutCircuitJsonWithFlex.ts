@@ -181,7 +181,11 @@ export function layoutCircuitJsonWithFlex(
   let containerWidth = rootSubcircuitWidth
   let containerHeight = rootSubcircuitHeight
 
-  if (options.inferContainerSize === true || !(containerWidth > 0) || !(containerHeight > 0)) {
+  if (
+    options.inferContainerSize === true ||
+    !(containerWidth > 0) ||
+    !(containerHeight > 0)
+  ) {
     const { width: minW, height: minH } = getMinimumFlexContainer(
       nodeInfos.map((n) => ({ width: n.width, height: n.height })),
       options,
@@ -192,7 +196,6 @@ export function layoutCircuitJsonWithFlex(
     if (options.inferContainerSize === true || !(containerHeight > 0)) {
       containerHeight = minH
     }
-
     // Persist inferred size back into the container element so that downstream
     // tooling (e.g. SVG export) can rely on meaningful dimensions.
     ;(effectiveRootContainer as any).width = containerWidth

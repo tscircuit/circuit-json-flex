@@ -31,16 +31,14 @@ export function getMinimumFlexContainer(
   if (isRowDirection) {
     // Main-axis horizontally stacks children
     const totalChildWidth = children.reduce((sum, c) => sum + c.width, 0)
-    const width =
-      totalChildWidth + columnGap * Math.max(0, children.length - 1)
+    const width = totalChildWidth + columnGap * Math.max(0, children.length - 1)
 
     const height = children.reduce((max, c) => Math.max(max, c.height), 0)
     return { width, height }
   } else {
     // Column direction – stack vertically
     const totalChildHeight = children.reduce((sum, c) => sum + c.height, 0)
-    const height =
-      totalChildHeight + rowGap * Math.max(0, children.length - 1)
+    const height = totalChildHeight + rowGap * Math.max(0, children.length - 1)
 
     const width = children.reduce((max, c) => Math.max(max, c.width), 0)
     return { width, height }
